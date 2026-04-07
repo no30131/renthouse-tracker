@@ -1,0 +1,11 @@
+/* App-level layout — solarpunk organic background */
+.organic-root {
+  position: relative;
+  min-height: 100svh;
+}
+
+.organic-content {
+  position: relative;
+  z-index: 1;
+  min-height: 100svh;
+}

@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    platform: linux/amd64
+    container_name: renthouse_db
+    environment:
+      POSTGRES_USER: renthouse
+      POSTGRES_PASSWORD: renthouse
+      POSTGRES_DB: renthouse
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U renthouse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: renthouse_backend
+    ports:
+      - "8000:8080"
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://renthouse:renthouse@db:5432/renthouse
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
