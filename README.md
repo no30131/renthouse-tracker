@@ -75,8 +75,8 @@
 
 ```bash
 # 1. 複製專案
-git clone https://github.com/no30131/renthouse.git
-cd renthouse
+git clone https://github.com/no30131/renthouse-tracker.git
+cd renthouse-tracker
 
 # 2. 設定後端環境變數
 cp backend/.env.example backend/.env
@@ -170,7 +170,7 @@ uv run python -c "import bcrypt; print(bcrypt.hashpw(b'your_password', bcrypt.ge
 ## 📁 專案結構
 
 ```
-renthouse/
+renthouse-tracker/
 ├── backend/              # FastAPI 後端
 │   ├── app/
 │   │   ├── routers/      # API 端點
