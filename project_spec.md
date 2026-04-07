@@ -171,7 +171,7 @@
 |--------|------|------|------|
 | GET | `/api/houses` | 列出物件（支援篩選：`status`, `district`, `min_rent`, `max_rent`, `pet_friendly`）| ✅ |
 | POST | `/api/houses` | 手動新增物件（觸發 Geocoding + 通勤計算）| ✅ |
-| POST | `/api/houses/scrape` | 貼入 URL，自動解析並回傳預填欄位（支援專用解析 + 通用 OG/Meta 降級）| ✅ |
+| POST | `/api/houses/scrape` | 貼入 URL，自動解析並回傳預填欄位（591 使用 Playwright 渲染頁面，從 DOM 提取完整欄位；其他網站使用 OG/Meta 降級）| ✅ |
 | GET | `/api/houses/{id}` | 取得物件詳情（含通勤記錄）| ✅ |
 | PATCH | `/api/houses/{id}` | 更新物件資訊（評分、備忘、狀態等）| ✅ |
 | DELETE | `/api/houses/{id}` | 刪除物件 | ✅ |

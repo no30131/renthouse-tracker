@@ -135,23 +135,15 @@ export default function NewHousePage() {
 
       const map: Array<[keyof FormState, string]> = [
         ["title", "title"], ["address", "address"], ["district", "district"],
-        ["rent_price", "rent_price"], ["floor", "floor"],
+        ["rent_price", "rent_price"], ["size_ping", "size_ping"], ["floor", "floor"],
         ["source", "source"], ["source_id", "source_id"],
+        ["pet_friendly", "pet_friendly"], ["cooking_allowed", "cooking_allowed"],
       ];
       for (const [field, key] of map) {
         if (data[key] != null && data[key] !== "") {
           next[field] = String(data[key]);
           filled[field] = true;
         }
-      }
-      // booleans
-      if (data.pet_friendly != null) {
-        next.pet_friendly = String(data.pet_friendly);
-        filled.pet_friendly = true;
-      }
-      if (data.cooking_allowed != null) {
-        next.cooking_allowed = String(data.cooking_allowed);
-        filled.cooking_allowed = true;
       }
 
       setForm(next);

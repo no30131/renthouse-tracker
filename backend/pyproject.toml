@@ -16,6 +16,7 @@ dependencies = [
     "shapely>=2.0.0",
     "beautifulsoup4>=4.14.3",
     "apscheduler>=3.11.2",
+    "playwright>=1.44.0",
 ]
 
 [dependency-groups]

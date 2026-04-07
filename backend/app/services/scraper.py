@@ -2,13 +2,12 @@
 URL scraper — fetches a rental listing page and extracts structured fields.
 
 Supported sites with dedicated parsers:
-  - rent.591.com.tw
+  - rent.591.com.tw  → Playwright（真實瀏覽器，解析 window.__NUXT__ 取完整欄位）
   - m.591.com.tw
 
-All other URLs fall back to generic OG / meta-tag extraction.
+All other URLs fall back to generic OG / meta-tag extraction via httpx.
 """
 
-import json
 import re
 from typing import Any
 
@@ -35,7 +34,7 @@ _TW_CITIES = (
     "澎湖縣", "金門縣", "連江縣",
 )
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# ── Generic helpers ─────────────────────────────────────────────────────────────
 
 def _og(soup: BeautifulSoup, prop: str) -> str:
     tag = soup.find("meta", property=prop) or soup.find("meta", attrs={"name": prop})
@@ -56,13 +55,12 @@ def _extract_price(texts: list[str]) -> int | None:
             m = re.search(pat, text or "")
             if m:
                 val = int(m.group(1).replace(",", ""))
-                if 1000 <= val <= 500_000:   # sanity range
+                if 1000 <= val <= 500_000:
                     return val
     return None
 
 
 def _extract_district(texts: list[str]) -> str | None:
-    # Match "XX區" or "XX鄉" or "XX鎮" optionally preceded by city name
     city_prefix = "|".join(re.escape(c) for c in _TW_CITIES)
     pat = rf"(?:{city_prefix})?([^\s,，｜|()（）\d]{{2,4}}[區鄉鎮])"
     for text in texts:
@@ -83,109 +81,208 @@ def _extract_floor(texts: list[str]) -> str | None:
     return None
 
 
-# ── 591 parser ─────────────────────────────────────────────────────────────────
+# ── 591 Playwright scraper ──────────────────────────────────────────────────────
 
-def _parse_591(url: str, soup: BeautifulSoup) -> dict[str, Any]:
-    result: dict[str, Any] = {"source": "591", "url": url}
+# 從已渲染的 DOM 提取 591 detail 資料
+_JS_EXTRACT_DETAIL = """
+(() => {
+  const txt = el => el ? el.textContent.trim() : '';
+  const find = sel => document.querySelector(sel);
+  const findAll = sel => [...document.querySelectorAll(sel)];
 
-    # source_id from URL
-    if m := re.search(r"rent-detail-(\d+)", url):
-        result["source_id"] = m.group(1)
+  const result = {};
 
-    # Try embedded JSON (Vue app may inject window.__INITIAL_STATE__ or similar)
-    for script in soup.find_all("script"):
-        text = script.string or ""
-        # 591 sometimes embeds data as window.pageDetail = {...}
-        for pattern in [
-            r"window\.__INITIAL_STATE__\s*=\s*(\{.+?\});?\s*(?:</script>|window\.)",
-            r"window\.pageDetail\s*=\s*(\{.+?\});",
-        ]:
-            jm = re.search(pattern, text, re.DOTALL)
-            if jm:
-                try:
-                    data = json.loads(jm.group(1))
-                    _apply_591_json(data, result)
-                except Exception:
-                    pass
+  // 標題
+  const titleEl = find('h1') || find('[class*="title"]');
+  if (titleEl) result.title = txt(titleEl).replace(/\\s*-\\s*591租屋網.*$/, '').trim();
 
-    # OG / meta fallback
-    og_title = _og(soup, "og:title")
-    og_desc = _og(soup, "og:description")
-    page_title_tag = soup.find("title")
-    page_title = page_title_tag.get_text() if page_title_tag else ""
+  // 地址
+  const addrEl = find('[class*="address"]') || find('[class*="addr"]');
+  if (addrEl) result.address = txt(addrEl);
 
-    # Clean page title: strip "- 591租屋網" suffix
-    clean_page_title = re.sub(r"\s*[-–—]\s*591租屋網.*$", "", page_title).strip()
+  // 租金：找包含「元/月」或「/月」的元素
+  const allText = document.body.innerText;
+  const priceM = allText.match(/(\\d[\\d,]+)\\s*元?\\/月/);
+  if (priceM) result.price = parseInt(priceM[1].replace(/,/g, ''));
 
-    texts = [og_title, og_desc, clean_page_title, page_title]
+  // 樓層：多種格式
+  // "5/12樓", "5樓/共12樓", "第5層/共12層", "5F/12F"
+  const floorPatterns = [
+    [/(\\d+)\\s*[\\/／]\\s*(\\d+)\\s*樓/, (m) => m[1]+'F/'+m[2]+'F'],
+    [/第\\s*(\\d+)\\s*[層樓][^共]*共\\s*(\\d+)/, (m) => m[1]+'F/'+m[2]+'F'],
+    [/(\\d+)\\s*樓\\s*[\\/／]\\s*共\\s*(\\d+)/, (m) => m[1]+'F/'+m[2]+'F'],
+    [/(\\d+)\\s*[FfＦ][\\s\\/／]+(\\d+)\\s*[FfＦ]/, (m) => m[1]+'F/'+m[2]+'F'],
+    [/樓層[^\\d]*(\\d+)\\s*[\\/／]\\s*(\\d+)/, (m) => m[1]+'F/'+m[2]+'F'],
+    [/(\\d+)\\s*樓/, (m) => m[1]+'F'],
+  ];
+  for (const [pat, fmt] of floorPatterns) {
+    const m = allText.match(pat);
+    if (m) { result.floor_name = fmt(m); break; }
+  }
+  // 坪數
+  const areaM = allText.match(/([\\d.]+)\\s*坪/);
+  if (areaM) result.area = parseFloat(areaM[1]);
 
-    if "title" not in result:
-        raw = og_title or clean_page_title
-        if raw:
-            result["title"] = raw
+  // 行政區（從地址抽）
+  const distM = (result.address || allText).match(/[^\\s市縣]{2,4}[區鄉鎮]/);
+  if (distM) result.section_name = distM[0];
 
-    if "rent_price" not in result:
-        price = _extract_price(texts)
-        if price:
-            result["rent_price"] = price
+  // 條件標籤（找所有 tag/label 類元素文字）
+  const tagTexts = findAll('[class*="tag"], [class*="label"], [class*="condition"], [class*="feature"]')
+    .map(el => txt(el)).filter(t => t.length < 20);
+  result._tags = tagTexts;
 
-    if "district" not in result:
-        district = _extract_district(texts)
-        if district:
-            result["district"] = district
+  return result;
+})()
+"""
 
-    if "floor" not in result:
-        floor = _extract_floor(texts)
-        if floor:
-            result["floor"] = floor
 
-    # Try address from og:description (often starts with "地址：...")
-    if "address" not in result:
-        for text in [og_desc, og_title]:
-            am = re.search(r"(?:地址[：:]?\s*)([^\s,，。!！]+(?:[路街道巷弄號][^\s,，。!！]{0,10})?)", text or "")
-            if am:
-                result["address"] = am.group(1)
-                break
+def _map_591_detail(raw: dict, post_id: str, url: str) -> dict[str, Any]:
+    """將從 window.__NUXT__ 取出的物件轉換為 house fields。"""
+    result: dict[str, Any] = {"source": "591", "url": url, "source_id": post_id}
 
-    # Pet / cooking from description keywords
-    if "pet_friendly" not in result and og_desc:
-        if "可養寵" in og_desc or "寵物友善" in og_desc:
-            result["pet_friendly"] = True
-        elif "不可養寵" in og_desc or "禁止養寵" in og_desc:
-            result["pet_friendly"] = False
+    if title := raw.get("title") or raw.get("name"):
+        # 清除 "- 591租屋網" 後綴
+        result["title"] = re.sub(r"\s*[-–—]\s*591租屋網.*$", "", str(title)).strip()
 
-    if "cooking_allowed" not in result and og_desc:
-        if "可開伙" in og_desc or "允許開伙" in og_desc:
-            result["cooking_allowed"] = True
-        elif "不可開伙" in og_desc or "禁止開伙" in og_desc:
-            result["cooking_allowed"] = False
+    price_raw = raw.get("price") or raw.get("rent_price") or ""
+    try:
+        result["rent_price"] = int(str(price_raw).replace(",", "").strip())
+    except (ValueError, AttributeError):
+        pass
+
+    # 行政區：section_name / region_name，fallback 從 address 抽取
+    section_raw = str(raw.get("section_name") or "").strip()
+    # 過濾掉「址:」等前綴，只保留行政區部分
+    m_sec = re.search(r"[^\s:：市縣]{2,4}[區鄉鎮]", section_raw)
+    section = m_sec.group(0) if m_sec else ""
+    region = str(raw.get("region_name") or "").strip()
+    address_raw = re.sub(r"^地址[：:]\s*", "", str(raw.get("address") or "").strip())
+    if section:
+        result["district"] = section
+    elif region:
+        result["district"] = region
+    elif address_raw:
+        m = re.search(r"(?<=[市縣])[^\s市縣]{2,4}[區鄉鎮]|^[^\s市縣]{2,4}[區鄉鎮]", address_raw)
+        if m:
+            result["district"] = m.group(0)
+
+    if address_raw:
+        result["address"] = address_raw.replace("-", "")
+
+    # 樓層：多個可能的欄位名稱
+    floor_raw = (raw.get("floor_name") or raw.get("floor") or
+                 raw.get("storey") or raw.get("floorName") or "")
+    if floor_raw:
+        result["floor"] = str(floor_raw).strip()
+
+    area_raw = raw.get("area") or raw.get("ping") or raw.get("area_ping") or ""
+    try:
+        result["size_ping"] = float(str(area_raw).strip())
+    except (ValueError, AttributeError):
+        pass
+
+    # 可養寵物 / 可開伙：tags / facility / condition / label / _tags 都試
+    def _iter_text(key: str) -> str:
+        items = raw.get(key) or []
+        if not isinstance(items, list):
+            return str(items)
+        parts = []
+        for item in items:
+            if isinstance(item, dict):
+                parts.append(str(item.get("name") or item.get("value") or item.get("desc") or ""))
+            else:
+                parts.append(str(item))
+        return " ".join(parts)
+
+    full_text = " ".join([
+        _iter_text("tags"), _iter_text("facility"), _iter_text("_tags"),
+        _iter_text("condition"), _iter_text("label"),
+        str(raw.get("pet") or ""), str(raw.get("cook") or ""),
+    ])
+
+    if "可養寵" in full_text or "寵物友善" in full_text:
+        result["pet_friendly"] = True
+    elif "不可養寵" in full_text or "禁止養寵" in full_text:
+        result["pet_friendly"] = False
+
+    if "可開伙" in full_text or "允許開伙" in full_text:
+        result["cooking_allowed"] = True
+    elif "不可開伙" in full_text or "禁止開伙" in full_text:
+        result["cooking_allowed"] = False
 
     return result
 
 
-def _apply_591_json(data: dict, result: dict) -> None:
-    """Best-effort extraction from whatever JSON shape 591 embeds."""
-    def _get(*keys: str) -> Any:
-        node = data
-        for k in keys:
-            if not isinstance(node, dict):
-                return None
-            node = node.get(k)
-        return node
+def _extract_591_post_id(url: str) -> str | None:
+    if m := re.search(r"rent-detail-(\d+)", url):
+        return m.group(1)
+    if m := re.search(r"591\.com\.tw/(\d{6,})", url):
+        return m.group(1)
+    return None
 
-    if title := _get("detail", "title") or _get("info", "title"):
-        result["title"] = title
-    if price := _get("detail", "price") or _get("info", "price"):
+
+async def _scrape_591_playwright(url: str, post_id: str) -> dict[str, Any]:
+    import asyncio
+    from playwright.async_api import async_playwright
+
+    captured: dict = {}
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-blink-features=AutomationControlled",
+            ],
+        )
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            viewport={"width": 1280, "height": 800},
+            locale="zh-TW",
+            timezone_id="Asia/Taipei",
+        )
+        await context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
+        page = await context.new_page()
+
+        async def on_response(response):
+            if "bff-house.591.com.tw/v1/rent/community" in response.url:
+                try:
+                    import json as _json
+                    body = _json.loads(await response.body())
+                    if isinstance(body.get("data"), dict):
+                        captured.update(body["data"])
+                except Exception:
+                    pass
+
+        page.on("response", on_response)
+
         try:
-            result["rent_price"] = int(str(price).replace(",", ""))
-        except ValueError:
-            pass
-    if address := _get("detail", "address") or _get("info", "address"):
-        result["address"] = address
-    if district := _get("detail", "region_name") or _get("info", "section_name"):
-        result["district"] = district
-    if floor := _get("detail", "floor_name"):
-        result["floor"] = str(floor)
+            await page.goto(url, wait_until="networkidle", timeout=30000)
+            for _ in range(6):
+                if captured:
+                    break
+                await asyncio.sleep(0.5)
+            raw = await page.evaluate(_JS_EXTRACT_DETAIL)
+        finally:
+            await browser.close()
+
+    if captured:
+        return _map_591_detail(captured, post_id, url)
+
+    if raw:
+        return _map_591_detail(raw, post_id, url)
+
+    return {"url": url, "source": "591", "source_id": post_id,
+            "error": "無法取得完整資料，請手動補充"}
 
 
 # ── Generic parser ─────────────────────────────────────────────────────────────
@@ -225,12 +322,22 @@ async def scrape_url(url: str) -> dict[str, Any]:
     Fetch *url* and return a dict of extracted house fields.
     Never raises — on any error returns {"url": url, "source": "Manual", "error": "..."}.
     """
+    if "591.com.tw" in url:
+        post_id = _extract_591_post_id(url)
+        if not post_id:
+            return {"url": url, "source": "591", "error": "無法從網址中解析物件 ID"}
+        try:
+            return await _scrape_591_playwright(url, post_id)
+        except Exception as exc:
+            return {"url": url, "source": "591", "error": f"Playwright 錯誤：{exc}"}
+
+    # 其他網站：OG meta 爬蟲
     try:
         async with httpx.AsyncClient(
             headers=_HEADERS,
             follow_redirects=True,
             timeout=12,
-            verify=False,   # 部分台灣網站（如 591）SSL 憑證不符規範
+            verify=False,
         ) as client:
             resp = await client.get(url)
             resp.raise_for_status()
@@ -238,8 +345,4 @@ async def scrape_url(url: str) -> dict[str, Any]:
         return {"url": url, "source": "Manual", "error": f"無法取得頁面：{exc}"}
 
     soup = BeautifulSoup(resp.text, "html.parser")
-
-    if "591.com.tw" in url:
-        return _parse_591(url, soup)
-
     return _parse_generic(url, soup)

@@ -2,6 +2,8 @@
 
 個人租屋物件評估與管理工具，整合通勤時間計算、等時圈分析、實價登錄查詢與氣候資料，幫助你客觀篩選並紀錄租屋物件。
 
+![Demo](images/demo.gif)
+
 > ⚠️ **Disclaimer**：本專案為個人自用工具，爬蟲功能請自行評估使用風險，作者不負任何責任（use at your own risk）。
 
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-支持我-72C1AA?logo=ko-fi&logoColor=white)](https://ko-fi.com/no30131)
