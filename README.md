@@ -1,5 +1,7 @@
 # 🏠 Renthouse Tracker
 
+[English](#-renthouse-tracker-1) | 繁體中文
+
 個人租屋物件評估與管理工具，整合通勤時間計算、等時圈分析、實價登錄查詢與氣候資料，幫助你客觀篩選並紀錄租屋物件。
 
 > ⚠️ **Disclaimer**：本專案為個人自用工具，爬蟲功能請自行評估使用風險，作者不負任何責任（use at your own risk）。
@@ -197,5 +199,211 @@ MIT
 ## ☕ Buy me a coffee
 
 如果這個專案對你有幫助，歡迎請我喝杯咖啡 ☕
+
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ko--fi-72C1AA?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/no30131)
+
+---
+
+# 🏠 Renthouse Tracker
+
+[繁體中文](#-renthouse-tracker) | English
+
+A personal rental property evaluation and management tool. Integrates commute time calculation, isochrone analysis, official price registry lookup, and climate data to help you objectively filter and track rental listings.
+
+> ⚠️ **Disclaimer**: This is a personal-use tool. Use the scraping features at your own risk — the author takes no responsibility for any consequences.
+
+---
+
+## ✨ Features
+
+- **Property management**: Add listings manually or by pasting a rental URL for auto-fill; supports ratings, notes, and status tracking
+- **Commute time calculation**: Uses Google Routes API to calculate car/scooter commute times based on your target arrival time
+- **Isochrone map**: Generates a 30-minute travel range from your workplace via Mapbox Isochrone API, with all properties plotted on a map
+- **Current vs. new comparison**: Side-by-side view of climate and commute data to quickly evaluate the benefits of moving
+- **Climate data**: Fetches annual average humidity and rainy days per district from Open-Meteo, cached in DB to avoid redundant requests
+- **Real price registry**: Downloads government CSV data to query buy/rent price trends per square meter over the past 10 years by street
+- **Auto crawler**: APScheduler-based scheduled scraping with isochrone filtering and deduplication; also supports external data push via Webhook
+
+---
+
+## 📸 Screenshots
+
+**Property List** — listing info, sorting, and filtering
+![Property List](images/houses.png)
+
+**Add Property** — paste a rental URL to auto-fill fields
+![Add Property](images/new.png)
+
+**Isochrone Map** — 20/30/40-minute travel range from workplace
+![Isochrone](images/isochrone.png)
+
+**Current vs. New Comparison** — side-by-side climate and commute diff
+![Comparison](images/compare.png)
+
+**Preferences** — set workplace address and target commute times
+![Preferences](images/preferences.png)
+
+**Real Price Registry** — 10-year buy/rent price trend by street
+![Real Price](images/realprice.png)
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3.13 + FastAPI + SQLAlchemy + GeoAlchemy2 |
+| Database | PostgreSQL 17 + PostGIS 3.5 |
+| DB Migration | Alembic |
+| Frontend | React 19 + Vite + TypeScript |
+| Map | Leaflet + OpenStreetMap |
+| Package Manager | uv (backend) / yarn (frontend) |
+| Design Style | Solar Punk |
+
+---
+
+## 📋 Prerequisites
+
+You need API keys for the following services:
+
+| Service | Purpose | Cost |
+|---------|---------|------|
+| [Google Maps Platform](https://developers.google.com/maps) | Geocoding + Routes API | Free monthly quota |
+| [Mapbox](https://www.mapbox.com/) | Isochrone API | Free monthly quota |
+
+Climate data is from [Open-Meteo](https://open-meteo.com/) — **no API key required**.
+
+---
+
+## 🚀 Quick Start
+
+### Option 1: Docker Compose (recommended)
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/no30131/renthouse-tracker.git
+cd renthouse-tracker
+
+# 2. Set up backend environment variables
+cp backend/.env.example backend/.env
+# Edit backend/.env and fill in your API keys and password
+
+# 3. Start DB + backend
+docker compose up -d
+
+# 4. Start frontend (new terminal)
+cd frontend
+cp .env.example .env      # defaults to http://localhost:8000
+yarn install
+yarn dev
+```
+
+Frontend at [http://localhost:5173](http://localhost:5173), backend API docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+---
+
+### Option 2: Local Development
+
+**Backend**
+
+```bash
+cd backend
+
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env and fill in your settings
+
+# Start PostgreSQL + PostGIS (install separately or use Docker)
+docker compose up -d db
+
+# Run DB migration
+uv run alembic upgrade head
+
+# Start backend
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+**Frontend**
+
+```bash
+cd frontend
+cp .env.example .env
+yarn install
+yarn dev
+```
+
+---
+
+## ⚙️ Environment Variables
+
+Copy `backend/.env.example` → `backend/.env` and fill in the following:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | ✅ |
+| `ADMIN_USERNAME` | Admin account username | ✅ |
+| `ADMIN_PASSWORD_HASH` | bcrypt hashed password (see below) | ✅ |
+| `JWT_SECRET_KEY` | JWT signing key (any random string) | ✅ |
+| `GOOGLE_API_KEY` | Google Geocoding + Routes API Key | ✅ |
+| `MAPBOX_TOKEN` | Mapbox Public Token | ✅ |
+| `WEBHOOK_SECRET` | Webhook verification secret | ✅ |
+| `CORS_ORIGINS` | Allowed frontend origin (default: `http://localhost:5173`) | ❌ |
+| `CRAWLER_ENABLED` | Enable scheduled crawler (default: `false`) | ❌ |
+
+**Generate password hash**:
+
+```bash
+cd backend
+uv run python -c "import bcrypt; print(bcrypt.hashpw(b'your_password', bcrypt.gensalt()).decode())"
+```
+
+---
+
+## 🕷 Crawler Schedule
+
+Scheduled scraping is **disabled by default**. Modify search criteria in `backend/app/crawler_config.py`. To enable, set `CRAWLER_ENABLED=true` in `backend/.env`.
+
+The data source interface is defined in `backend/app/services/listing_provider.py` — implement `fetch_listings()` for your target platform. You can also push data from a local script via `POST /api/crawler/ingest`.
+
+---
+
+## 📁 Project Structure
+
+```
+renthouse-tracker/
+├── backend/              # FastAPI backend
+│   ├── app/
+│   │   ├── routers/      # API endpoints
+│   │   ├── services/     # Business logic (commute, scraper, climate…)
+│   │   ├── models/       # SQLAlchemy models
+│   │   ├── schemas/      # Pydantic schemas
+│   │   ├── config.py     # Environment config
+│   │   └── crawler_config.py  # Crawler search criteria
+│   ├── alembic/          # DB migrations
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── frontend/             # React + Vite frontend
+│   └── src/
+├── docker-compose.yml
+└── project_spec.md       # Detailed system spec and development roadmap
+```
+
+---
+
+## 📄 License
+
+MIT
+
+---
+
+## ☕ Buy me a coffee
+
+If this project has been helpful, feel free to buy me a coffee ☕
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ko--fi-72C1AA?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/no30131)
