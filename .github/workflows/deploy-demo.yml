@@ -1,0 +1,55 @@
+name: Deploy Demo → GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時只跑一個部署，新的 push 會取消前一個進行中的部署
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Build demo
+        run: yarn build
+        working-directory: frontend
+        env:
+          VITE_DEMO_MODE: "true"
+
+      # React Router 用 history API，GitHub Pages 遇到非根路徑會 404
+      # 複製 index.html 為 404.html，讓 GH Pages 把所有路徑都交給 React 處理
+      - name: Fix SPA routing
+        run: cp frontend/dist/index.html frontend/dist/404.html
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

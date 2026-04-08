@@ -9,10 +9,45 @@ import IsochronePage from "./pages/IsochronePage";
 import RealPricePage from "./pages/RealPricePage";
 import "./App.css";
 
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+
+// Demo 模式自動注入假 token，跳過登入
+if (DEMO_MODE) {
+  localStorage.setItem("token", "demo-token");
+}
+
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const token = localStorage.getItem("token");
   if (!token) return <Navigate to="/login" replace />;
   return children;
+}
+
+function DemoBanner() {
+  if (!DEMO_MODE) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        bottom: 16,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+        background: "rgba(16, 185, 129, 0.92)",
+        color: "#fff",
+        padding: "8px 20px",
+        borderRadius: 99,
+        fontSize: 13,
+        fontWeight: 600,
+        letterSpacing: "0.2px",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+        backdropFilter: "blur(8px)",
+        pointerEvents: "none",
+        whiteSpace: "nowrap",
+      }}
+    >
+      🌿 Demo 模式 — 所有資料均為示範用假資料
+    </div>
+  );
 }
 
 export default function App() {
@@ -24,6 +59,7 @@ export default function App() {
       <div className="organic-blob organic-2" aria-hidden="true" />
       <div className="organic-blob organic-3" aria-hidden="true" />
 
+      <DemoBanner />
       <div className="organic-content">
         <BrowserRouter>
           <Routes>

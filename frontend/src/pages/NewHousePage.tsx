@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { DEMO_SCRAPE_URL } from "../demo/mockData";
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
 const STATUS_OPTIONS = ["考慮中", "已看房", "已租定", "已放棄"];
 
@@ -105,7 +108,7 @@ function SectionTitle({ icon, children }: { icon: string; children: React.ReactN
 
 export default function NewHousePage() {
   const navigate = useNavigate();
-  const [urlInput, setUrlInput] = useState("");
+  const [urlInput, setUrlInput] = useState(DEMO_MODE ? DEMO_SCRAPE_URL : "");
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState("");
   const [scraped, setScraped] = useState(false);
@@ -244,9 +247,10 @@ export default function NewHousePage() {
               type="url"
               placeholder="https://..."
               value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleScrape())}
-              style={{ flex: 1 }}
+              onChange={DEMO_MODE ? undefined : (e) => setUrlInput(e.target.value)}
+              onKeyDown={DEMO_MODE ? undefined : (e) => e.key === "Enter" && (e.preventDefault(), handleScrape())}
+              readOnly={DEMO_MODE}
+              style={{ flex: 1, ...(DEMO_MODE ? { cursor: "default", opacity: 0.75 } : {}) }}
             />
             <button
               type="button"
