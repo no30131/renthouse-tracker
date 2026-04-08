@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../api";
@@ -258,14 +260,16 @@ export default function IsochronePage() {
               以公司地址為中心，顯示 20 / 30 / 40 分鐘車程可到達的範圍
             </p>
           </div>
-          <button
-            className="btn-primary"
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-            style={{ padding: "10px 22px", fontSize: 13, minHeight: 40, opacity: refreshing ? 0.7 : 1 }}
-          >
-            {refreshing ? "生成中…" : "重新生成"}
-          </button>
+          {!DEMO_MODE && (
+            <button
+              className="btn-primary"
+              onClick={handleRefresh}
+              disabled={refreshing || loading}
+              style={{ padding: "10px 22px", fontSize: 13, minHeight: 40, opacity: refreshing ? 0.7 : 1 }}
+            >
+              {refreshing ? "生成中…" : "重新生成"}
+            </button>
+          )}
         </div>
 
         {msg && (
