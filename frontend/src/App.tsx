@@ -61,7 +61,7 @@ export default function App() {
 
       <DemoBanner />
       <div className="organic-content">
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route
