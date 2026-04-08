@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosInstance } from "axios";
 import {
   MOCK_HOUSES,
   MOCK_PREFERENCES,
@@ -116,4 +116,4 @@ const demoApi: any = {
   delete: () => mockOk({}),
 };
 
-export const api = DEMO_MODE ? demoApi : realApi;
+export const api: AxiosInstance = DEMO_MODE ? demoApi : realApi;

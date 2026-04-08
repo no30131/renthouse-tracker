@@ -6,6 +6,8 @@
 
 > ⚠️ **Disclaimer**：本專案為個人自用工具，爬蟲功能請自行評估使用風險，作者不負任何責任（use at your own risk）。
 
+[![Live Demo](https://img.shields.io/badge/🌿_Live_Demo-試用看看-10B981?style=for-the-badge)](https://no30131.github.io/renthouse-tracker/)
+
 ---
 
 ## ✨ 功能特色
@@ -211,6 +213,8 @@ MIT
 A personal rental property evaluation and management tool. Integrates commute time calculation, isochrone analysis, official price registry lookup, and climate data to help you objectively filter and track rental listings.
 
 > ⚠️ **Disclaimer**: This is a personal-use tool. Use the scraping features at your own risk — the author takes no responsibility for any consequences.
+
+[![Live Demo](https://img.shields.io/badge/🌿_Live_Demo-Try_it_out-10B981?style=for-the-badge)](https://no30131.github.io/renthouse-tracker/)
 
 ---
 
