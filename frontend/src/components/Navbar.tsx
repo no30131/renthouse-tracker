@@ -1,6 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import Logo from "./Logo";
 
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+
 export default function Navbar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -66,13 +68,15 @@ export default function Navbar() {
             </button>
           );
         })}
-        <button
-          className="btn-outline"
-          onClick={handleLogout}
-          style={{ padding: "9px 18px", fontSize: 13, minHeight: 40 }}
-        >
-          登出
-        </button>
+        {!DEMO_MODE && (
+          <button
+            className="btn-outline"
+            onClick={handleLogout}
+            style={{ padding: "9px 18px", fontSize: 13, minHeight: 40 }}
+          >
+            登出
+          </button>
+        )}
       </div>
     </nav>
   );

@@ -70,7 +70,7 @@ function buildPopupHtml(house: House): string {
       ${districtHtml}
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">${priceHtml}${sizeHtml ? `&nbsp;${sizeHtml}` : ""}</div>
       ${commuteHtml}
-      <a href="/houses/${house.id}" onclick="sessionStorage.setItem('iso_popup_house_id','${house.id}');return true;" style="display:block;text-align:center;padding:5px 0;background:#10B981;color:#fff;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;">查看詳情</a>
+      <a href="${import.meta.env.BASE_URL}houses/${house.id}" onclick="sessionStorage.setItem('iso_popup_house_id','${house.id}');return true;" style="display:block;text-align:center;padding:5px 0;background:#10B981;color:#fff;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;">查看詳情</a>
     </div>
   `;
 }
@@ -298,7 +298,7 @@ export default function IsochronePage() {
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>交通方式</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
-                  {travelMode === "driving" ? "🚗 開車" : travelMode === "cycling" ? "🚲 騎車" : travelMode}
+                  {travelMode === "driving" ? "🚗 開車" : travelMode === "cycling" ? "🚲 自行車" : travelMode === "MOTORCYCLE" ? "🛵 機車" : travelMode}
                 </span>
               </div>
               {generatedAt && (
