@@ -6,8 +6,6 @@
 
 > ⚠️ **Disclaimer**：本專案為個人自用工具，爬蟲功能請自行評估使用風險，作者不負任何責任（use at your own risk）。
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-支持我-72C1AA?logo=ko-fi&logoColor=white)](https://ko-fi.com/no30131)
-
 ---
 
 ## ✨ 功能特色
@@ -195,3 +193,11 @@ renthouse-tracker/
 ## 📄 License
 
 MIT
+
+---
+
+## ☕ Buy me a coffee
+
+如果這個專案對你有幫助，歡迎請我喝杯咖啡 ☕
+
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ko--fi-72C1AA?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/no30131)

@@ -210,17 +210,6 @@ export default function PreferencesPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-sub)", marginBottom: 7 }}>
-                    名稱標籤
-                  </label>
-                  <input
-                    className="field-input"
-                    value={companyLabel}
-                    onChange={(e) => setCompanyLabel(e.target.value)}
-                    placeholder="例如：公司A、辦公室"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-sub)", marginBottom: 7 }}>
                     詳細地址
                   </label>
                   <input

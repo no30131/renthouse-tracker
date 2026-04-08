@@ -317,11 +317,29 @@ def _parse_generic(url: str, soup: BeautifulSoup) -> dict[str, Any]:
 
 # ── Public entry point ─────────────────────────────────────────────────────────
 
+_DEMO_DATA: dict[str, Any] = {
+    "source": "591",
+    "source_id": "20000000",
+    "url": "",
+    "title": "中山商圈精品屋",
+    "address": "中山區新生北路一段",
+    "district": "中山區",
+    "rent_price": 40000,
+    "size_ping": 30,
+    "floor": "7F/10F",
+    "pet_friendly": False,
+    "cooking_allowed": True,
+}
+
+
 async def scrape_url(url: str) -> dict[str, Any]:
     """
     Fetch *url* and return a dict of extracted house fields.
     Never raises — on any error returns {"url": url, "source": "Manual", "error": "..."}.
     """
+    if "20xxxxxxx" in url.lower():
+        return {**_DEMO_DATA, "url": url}
+
     if "591.com.tw" in url:
         post_id = _extract_591_post_id(url)
         if not post_id:

@@ -10,7 +10,6 @@ interface House {
   rent_price: number | null;
   size_ping: number | null;
   floor: string | null;
-  management_fee: number | null;
   pet_friendly: boolean | null;
   cooking_allowed: boolean | null;
   status: string;
@@ -470,9 +469,6 @@ export default function HouseDetailPage() {
             </InfoRow>
             <InfoRow label="坪數">{house.size_ping != null ? `${house.size_ping} 坪` : <Dash />}</InfoRow>
             <InfoRow label="樓層">{house.floor ?? <Dash />}</InfoRow>
-            <InfoRow label="管理費">
-              {house.management_fee != null ? `$${house.management_fee.toLocaleString()}` : <Dash />}
-            </InfoRow>
             <InfoRow label="可養寵物"><BoolBadge value={house.pet_friendly} /></InfoRow>
             <InfoRow label="可開伙"><BoolBadge value={house.cooking_allowed} /></InfoRow>
             <InfoRow label="來源">{{ Manual: '手動新增' }[house.source as 'Manual'] ?? house.source}</InfoRow>
