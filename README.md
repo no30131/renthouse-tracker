@@ -204,6 +204,8 @@ MIT
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ko--fi-72C1AA?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/no30131)
 
+也歡迎訂閱我的 YouTube 頻道 🎬  [Melody's Flow | 軟體手作與日常隨筆](https://www.youtube.com/@MelodysFlow)
+
 ---
 
 # 🏠 Renthouse Tracker
@@ -411,3 +413,5 @@ MIT
 If this project has been helpful, feel free to buy me a coffee ☕
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ko--fi-72C1AA?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/no30131)
+
+Also feel free to check out my YouTube channel 🎬 [Melody's Flow](https://www.youtube.com/@MelodysFlow)
