@@ -84,17 +84,11 @@ cd renthouse-tracker
 cp backend/.env.example backend/.env
 # 編輯 backend/.env，填入 API Key 與密碼
 
-# 3. 啟動 DB + 後端
-docker compose up -d
-
-# 4. 啟動前端（另開終端機）
-cd frontend
-cp .env.example .env      # 預設指向 http://localhost:8000
-yarn install
-yarn dev
+# 3. 一鍵啟動（DB + 後端 + 前端）
+docker compose up --build
 ```
 
-前端開啟 [http://localhost:5173](http://localhost:5173)，後端 API 文件在 [http://localhost:8000/docs](http://localhost:8000/docs)。
+前端開啟 [http://localhost:3000](http://localhost:3000)，後端 API 文件在 [http://localhost:8000/docs](http://localhost:8000/docs)。
 
 ---
 
@@ -149,7 +143,7 @@ yarn dev
 | `GOOGLE_API_KEY` | Google Geocoding + Routes API Key | ✅ |
 | `MAPBOX_TOKEN` | Mapbox Public Token | ✅ |
 | `WEBHOOK_SECRET` | Webhook 驗證密鑰 | ✅ |
-| `CORS_ORIGINS` | 允許的前端來源（預設 `http://localhost:5173`）| ❌ |
+| `CORS_ORIGINS` | 允許的前端來源（預設 `http://localhost:3000`）| ❌ |
 | `CRAWLER_ENABLED` | 啟用排程爬蟲（預設 `false`）| ❌ |
 
 **產生密碼雜湊**：
@@ -185,7 +179,8 @@ renthouse-tracker/
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── frontend/             # React + Vite 前端
-│   └── src/
+│   ├── src/
+│   └── Dockerfile
 ├── docker-compose.yml
 └── project_spec.md       # 詳細系統規格與開發藍圖
 ```
@@ -294,17 +289,11 @@ cd renthouse-tracker
 cp backend/.env.example backend/.env
 # Edit backend/.env and fill in your API keys and password
 
-# 3. Start DB + backend
-docker compose up -d
-
-# 4. Start frontend (new terminal)
-cd frontend
-cp .env.example .env      # defaults to http://localhost:8000
-yarn install
-yarn dev
+# 3. Start everything (DB + backend + frontend)
+docker compose up --build
 ```
 
-Frontend at [http://localhost:5173](http://localhost:5173), backend API docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+Frontend at [http://localhost:3000](http://localhost:3000), backend API docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
 ---
 
@@ -359,7 +348,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in the following:
 | `GOOGLE_API_KEY` | Google Geocoding + Routes API Key | ✅ |
 | `MAPBOX_TOKEN` | Mapbox Public Token | ✅ |
 | `WEBHOOK_SECRET` | Webhook verification secret | ✅ |
-| `CORS_ORIGINS` | Allowed frontend origin (default: `http://localhost:5173`) | ❌ |
+| `CORS_ORIGINS` | Allowed frontend origin (default: `http://localhost:3000`) | ❌ |
 | `CRAWLER_ENABLED` | Enable scheduled crawler (default: `false`) | ❌ |
 
 **Generate password hash**:
@@ -395,7 +384,8 @@ renthouse-tracker/
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── frontend/             # React + Vite frontend
-│   └── src/
+│   ├── src/
+│   └── Dockerfile
 ├── docker-compose.yml
 └── project_spec.md       # Detailed system spec and development roadmap
 ```

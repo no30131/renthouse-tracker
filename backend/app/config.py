@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     WEBHOOK_SECRET: str
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5173"
+    CORS_ORIGINS: str = "http://localhost:3000"
 
     # 排程爬蟲（只留開關，其餘條件設定在 crawler_config.py）
     CRAWLER_ENABLED: bool = False
