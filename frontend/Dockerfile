@@ -21,7 +21,7 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # SPA routing：用 template 讓 nginx 動態讀 $PORT（Zeabur 會注入此變數）
-RUN printf 'server {\n\
+RUN mkdir -p /etc/nginx/templates && printf 'server {\n\
     listen ${PORT};\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
