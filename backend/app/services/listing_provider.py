@@ -26,8 +26,6 @@
 
 from typing import Any
 
-from app.services.crawler_private import fetch_591_listings
-
 
 async def fetch_listings(
     region_id: int,
@@ -41,6 +39,10 @@ async def fetch_listings(
     has_image: bool = True,
     max_pages: int = 3,
 ) -> list[dict[str, Any]]:
+    try:
+        from app.services.crawler_private import fetch_591_listings
+    except ModuleNotFoundError:
+        return []
     return await fetch_591_listings(
         region_id=region_id,
         section_ids=section_ids,
