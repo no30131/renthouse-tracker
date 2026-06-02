@@ -124,6 +124,8 @@ export default function HousesPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [editingRatingId, setEditingRatingId] = useState<string | null>(null);
+  const [ratingUpdating, setRatingUpdating] = useState(false);
   const [recalcingIds, setRecalcingIds] = useState<Set<string>>(new Set());
   const [recalcingAll, setRecalcingAll] = useState(false);
   const housesRef = useRef<House[]>([]);
@@ -276,6 +278,17 @@ export default function HousesPage() {
     } finally {
       setStatusUpdating(false);
       setEditingStatusId(null);
+    }
+  }
+
+  async function handleRatingChange(id: string, newRating: number | null) {
+    setRatingUpdating(true);
+    try {
+      await api.patch(`/api/houses/${id}`, { user_rating: newRating });
+      setHouses((prev) => prev.map((h) => h.id === id ? { ...h, user_rating: newRating } : h));
+    } finally {
+      setRatingUpdating(false);
+      setEditingRatingId(null);
     }
   }
 
@@ -646,8 +659,7 @@ export default function HousesPage() {
                         cursor: "pointer",
                       }}
                       onClick={() => {
-                        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
-                        navigate(`/houses/${h.id}`);
+                        window.open(`/houses/${h.id}`, "_blank");
                       }}
                       onMouseEnter={() => setHoveredId(h.id)}
                       onMouseLeave={() => setHoveredId(null)}
@@ -754,8 +766,28 @@ export default function HousesPage() {
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: "15px 12px" }}>
-                        <RatingBar value={h.user_rating} />
+                      <td style={{ padding: "15px 12px" }} onClick={(e) => e.stopPropagation()}>
+                        {editingRatingId === h.id ? (
+                          <select
+                            autoFocus
+                            disabled={ratingUpdating}
+                            defaultValue={h.user_rating ?? ""}
+                            onChange={(e) => handleRatingChange(h.id, e.target.value === "" ? null : Number(e.target.value))}
+                            onBlur={() => setEditingRatingId(null)}
+                            style={{ fontSize: 12, fontWeight: 600, borderRadius: 8, border: "1.5px solid var(--brand)", padding: "4px 6px", background: "#fff", color: "var(--text)", cursor: "pointer", outline: "none", opacity: ratingUpdating ? 0.6 : 1 }}
+                          >
+                            <option value="">—</option>
+                            {[1,2,3,4,5,6,7,8,9,10].map((n) => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        ) : (
+                          <span
+                            onClick={() => setEditingRatingId(h.id)}
+                            title="點擊修改評分"
+                            style={{ display: "inline-block", cursor: "pointer" }}
+                          >
+                            <RatingBar value={h.user_rating} />
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: "15px 12px", maxWidth: 80 }}>
                         {h.notes ? (

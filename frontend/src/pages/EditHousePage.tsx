@@ -87,7 +87,7 @@ export default function EditHousePage() {
         notes: form.notes || null,
       };
       await api.patch(`/api/houses/${id}`, payload);
-      navigate("/");
+      window.opener ? window.close() : navigate("/");
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(msg || "儲存失敗，請再試一次");
@@ -108,7 +108,7 @@ export default function EditHousePage() {
     <div style={{ minHeight: "100svh", paddingBottom: 80 }}>
       {/* Nav */}
       <nav className="nav-wrapper" style={{ position: "sticky", top: 0, zIndex: 10, height: 66, display: "flex", alignItems: "center", gap: 14, background: "rgba(253,252,248,0.88)", borderBottom: "1.5px solid var(--border-light)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", boxShadow: "0 2px 12px rgba(16,185,129,0.06)" }}>
-        <button className="btn-icon" onClick={() => navigate("/")} aria-label="返回列表" title="返回">
+        <button className="btn-icon" onClick={() => window.opener ? window.close() : navigate("/")} aria-label="返回列表" title="返回">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
         </button>
         <div>
@@ -185,7 +185,7 @@ export default function EditHousePage() {
             )}
 
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", paddingTop: 4, borderTop: "1.5px solid var(--border-light)" }}>
-              <button type="button" className="btn-outline" onClick={() => navigate("/")}>取消</button>
+              <button type="button" className="btn-outline" onClick={() => window.opener ? window.close() : navigate("/")}>取消</button>
               <button type="submit" className="btn-primary" disabled={submitting} style={{ minWidth: 120 }}>
                 {submitting ? "儲存中…" : "儲存變更"}
               </button>

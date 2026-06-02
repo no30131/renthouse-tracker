@@ -103,6 +103,8 @@ function NavBar() {
       sessionStorage.removeItem("iso_popup_house_id");
       sessionStorage.setItem("iso_restore_house_id", id);
       navigate("/isochrone");
+    } else if (window.opener) {
+      window.close();
     } else {
       navigate("/");
     }
@@ -300,7 +302,7 @@ export default function HouseDetailPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/houses/${id}`);
-      navigate("/");
+      window.opener ? window.close() : navigate("/");
     } finally {
       setDeleting(false);
     }
