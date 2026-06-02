@@ -26,6 +26,8 @@
 
 from typing import Any
 
+from app.services.crawler_private import fetch_591_listings
+
 
 async def fetch_listings(
     region_id: int,
@@ -39,9 +41,15 @@ async def fetch_listings(
     has_image: bool = True,
     max_pages: int = 3,
 ) -> list[dict[str, Any]]:
-    """
-    回傳符合條件的租屋物件清單。
-
-    預設為空實作，請自行依目標平台實作抓取邏輯。
-    """
-    return []
+    return await fetch_591_listings(
+        region_id=region_id,
+        section_ids=section_ids,
+        kind=kind,
+        rent_min=rent_min,
+        rent_max=rent_max,
+        area_min=area_min,
+        pet=pet,
+        cook=cook,
+        has_image=has_image,
+        max_pages=max_pages,
+    )

@@ -20,6 +20,8 @@ interface House {
   min_distance_km: number | null;
 }
 
+const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄"];
+
 const STATUS_BADGE: Record<string, string> = {
   待確認: "badge-blue",
   考慮中: "badge-amber",
@@ -95,6 +97,8 @@ export default function HousesPage() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
   const [recalcingIds, setRecalcingIds] = useState<Set<string>>(new Set());
   const [recalcingAll, setRecalcingAll] = useState(false);
   const housesRef = useRef<House[]>([]);
@@ -259,6 +263,17 @@ export default function HousesPage() {
     }
   }
 
+  async function handleStatusChange(id: string, newStatus: string) {
+    setStatusUpdating(true);
+    try {
+      await api.patch(`/api/houses/${id}`, { status: newStatus });
+      setHouses((prev) => prev.map((h) => h.id === id ? { ...h, status: newStatus } : h));
+    } finally {
+      setStatusUpdating(false);
+      setEditingStatusId(null);
+    }
+  }
+
   async function handleDelete(id: string) {
     setDeleteLoading(true);
     try {
@@ -303,7 +318,10 @@ export default function HousesPage() {
           </div>
           <button
             className="btn-primary"
-            onClick={() => navigate("/houses/new")}
+            onClick={() => {
+              sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKey, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
+              navigate("/houses/new");
+            }}
             style={{ padding: "9px 20px", fontSize: 13, minHeight: 40, flexShrink: 0, marginTop: 4 }}
           >
             + 新增物件
@@ -577,6 +595,7 @@ export default function HousesPage() {
                       "距離",
                       "狀態",
                       "評分",
+                      "備忘",
                       "",
                     ].map((h) => (
                       <th
@@ -693,16 +712,40 @@ export default function HousesPage() {
                           </button>
                         )}
                       </td>
-                      <td style={{ padding: "15px 12px" }}>
-                        <span
-                          className={`badge ${STATUS_BADGE[h.status] ?? "badge-teal"}`}
-                          style={{ minWidth: "4em", justifyContent: "center", whiteSpace: "nowrap" }}
-                        >
-                          {statusDisplay(h.status)}
-                        </span>
+                      <td style={{ padding: "15px 12px" }} onClick={(e) => e.stopPropagation()}>
+                        {editingStatusId === h.id ? (
+                          <select
+                            autoFocus
+                            value={statusDisplay(h.status)}
+                            disabled={statusUpdating}
+                            onChange={(e) => handleStatusChange(h.id, e.target.value)}
+                            onBlur={() => setEditingStatusId(null)}
+                            style={{ fontSize: 12, fontWeight: 600, borderRadius: 8, border: "1.5px solid var(--brand)", padding: "4px 8px", background: "#fff", color: "var(--text)", cursor: "pointer", outline: "none", opacity: statusUpdating ? 0.6 : 1 }}
+                          >
+                            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        ) : (
+                          <span
+                            className={`badge ${STATUS_BADGE[h.status] ?? "badge-teal"}`}
+                            style={{ minWidth: "4em", justifyContent: "center", whiteSpace: "nowrap", cursor: "pointer" }}
+                            onClick={() => setEditingStatusId(h.id)}
+                            title="點擊修改狀態"
+                          >
+                            {statusDisplay(h.status)}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: "15px 12px" }}>
                         <RatingBar value={h.user_rating} />
+                      </td>
+                      <td style={{ padding: "15px 12px", maxWidth: 80 }}>
+                        {h.notes ? (
+                          <span title={h.notes} style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, whiteSpace: "nowrap" }}>
+                            {h.notes.slice(0, 5)}{h.notes.length > 5 ? "…" : ""}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)", fontSize: 13 }}>—</span>
+                        )}
                       </td>
                       {/* 操作 */}
                       <td style={{ padding: "15px 10px", width: 112 }} onClick={(e) => e.stopPropagation()}>
@@ -729,7 +772,10 @@ export default function HousesPage() {
                           <div style={{ display: "flex", gap: 6, opacity: hoveredId === h.id ? 1 : 0, transition: "opacity 0.15s" }}>
                             <button
                               title="編輯"
-                              onClick={() => navigate(`/houses/${h.id}/edit`)}
+                              onClick={() => {
+                                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKey, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
+                                navigate(`/houses/${h.id}/edit`);
+                              }}
                               style={{ width: 32, height: 32, borderRadius: 8, border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "var(--brand-mid)", transition: "background 0.15s, border-color 0.15s" }}
                               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--brand-xlight)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand)"; }}
                               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fff"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; }}
