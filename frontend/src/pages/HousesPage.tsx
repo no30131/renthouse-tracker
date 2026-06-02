@@ -80,12 +80,37 @@ function RatingBar({ value }: { value: number | null }) {
 
 type SortKey = "rent_asc" | "rent_desc" | "rating_asc" | "rating_desc" | "size_asc" | "size_desc" | "dist_asc" | "dist_desc";
 
+function fieldOf(k: SortKey): string { return k.replace(/_asc$|_desc$/, ""); }
+
+function compareByKey(a: House, b: House, key: SortKey): number {
+  switch (key) {
+    case "rent_asc": return (a.rent_price ?? 0) - (b.rent_price ?? 0);
+    case "rent_desc": return (b.rent_price ?? 0) - (a.rent_price ?? 0);
+    case "rating_asc": return (a.user_rating ?? 0) - (b.user_rating ?? 0);
+    case "rating_desc": return (b.user_rating ?? 0) - (a.user_rating ?? 0);
+    case "size_asc": return (a.size_ping ?? 0) - (b.size_ping ?? 0);
+    case "size_desc": return (b.size_ping ?? 0) - (a.size_ping ?? 0);
+    case "dist_asc": {
+      if (a.min_distance_km == null && b.min_distance_km == null) return 0;
+      if (a.min_distance_km == null) return 1;
+      if (b.min_distance_km == null) return -1;
+      return a.min_distance_km - b.min_distance_km;
+    }
+    case "dist_desc": {
+      if (a.min_distance_km == null && b.min_distance_km == null) return 0;
+      if (a.min_distance_km == null) return 1;
+      if (b.min_distance_km == null) return -1;
+      return b.min_distance_km - a.min_distance_km;
+    }
+  }
+}
+
 const SESSION_KEY = "houses-page-state";
 
 function loadSavedState() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
-    if (raw) return JSON.parse(raw) as { sortKey: SortKey | null; selectedDistricts: string[]; selectedStatuses: string[]; scrollY: number };
+    if (raw) return JSON.parse(raw) as { sortKeys: SortKey[]; selectedDistricts: string[]; selectedStatuses: string[]; scrollY: number };
   } catch { /* ignore */ }
   return null;
 }
@@ -105,9 +130,18 @@ export default function HousesPage() {
 
   // filter / sort state — 從 sessionStorage 恢復
   const saved = loadSavedState();
-  const [sortKey, setSortKey] = useState<SortKey | null>(saved?.sortKey ?? null);
+  const [sortKeys, setSortKeys] = useState<SortKey[]>(saved?.sortKeys ?? []);
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>(saved?.selectedDistricts ?? []);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(saved?.selectedStatuses ?? []);
+
+  function toggleSortKey(key: SortKey) {
+    setSortKeys((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      const sameField = prev.find((k) => fieldOf(k) === fieldOf(key));
+      if (sameField) return prev.map((k) => (k === sameField ? key : k));
+      return [...prev, key];
+    });
+  }
 
   function fetchHouses() {
     return api.get("/api/houses").then((res) => {
@@ -196,44 +230,15 @@ export default function HousesPage() {
       selectedStatuses.length === 0 ? true : selectedStatuses.includes(statusDisplay(h.status))
     );
 
-  if (sortKey === "rent_asc")
-    displayedHouses = [...displayedHouses].sort(
-      (a, b) => (a.rent_price ?? 0) - (b.rent_price ?? 0)
-    );
-  else if (sortKey === "rent_desc")
-    displayedHouses = [...displayedHouses].sort(
-      (a, b) => (b.rent_price ?? 0) - (a.rent_price ?? 0)
-    );
-  else if (sortKey === "rating_asc")
-    displayedHouses = [...displayedHouses].sort(
-      (a, b) => (a.user_rating ?? 0) - (b.user_rating ?? 0)
-    );
-  else if (sortKey === "rating_desc")
-    displayedHouses = [...displayedHouses].sort(
-      (a, b) => (b.user_rating ?? 0) - (a.user_rating ?? 0)
-    );
-  else if (sortKey === "size_asc")
-    displayedHouses = [...displayedHouses].sort(
-      (a, b) => (a.size_ping ?? 0) - (b.size_ping ?? 0)
-    );
-  else if (sortKey === "size_desc")
-    displayedHouses = [...displayedHouses].sort(
-      (a, b) => (b.size_ping ?? 0) - (a.size_ping ?? 0)
-    );
-  else if (sortKey === "dist_asc")
+  if (sortKeys.length > 0) {
     displayedHouses = [...displayedHouses].sort((a, b) => {
-      if (a.min_distance_km == null && b.min_distance_km == null) return 0;
-      if (a.min_distance_km == null) return 1;
-      if (b.min_distance_km == null) return -1;
-      return a.min_distance_km - b.min_distance_km;
+      for (const key of sortKeys) {
+        const r = compareByKey(a, b, key);
+        if (r !== 0) return r;
+      }
+      return 0;
     });
-  else if (sortKey === "dist_desc")
-    displayedHouses = [...displayedHouses].sort((a, b) => {
-      if (a.min_distance_km == null && b.min_distance_km == null) return 0;
-      if (a.min_distance_km == null) return 1;
-      if (b.min_distance_km == null) return -1;
-      return b.min_distance_km - a.min_distance_km;
-    });
+  }
 
   async function handleRecalc(id: string) {
     setRecalcingIds((prev) => new Set(prev).add(id));
@@ -319,7 +324,7 @@ export default function HousesPage() {
           <button
             className="btn-primary"
             onClick={() => {
-              sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKey, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
+              sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
               navigate("/houses/new");
             }}
             style={{ padding: "9px 20px", fontSize: 13, minHeight: 40, flexShrink: 0, marginTop: 4 }}
@@ -358,34 +363,48 @@ export default function HousesPage() {
                   { key: "dist_asc", label: "距離", dir: "asc" },
                   { key: "dist_desc", label: "距離", dir: "desc" },
                 ] as { key: SortKey; label: string; dir: "asc" | "desc" }[]
-              ).map(({ key, label, dir }) => (
-                <button
-                  key={key}
-                  onClick={() => setSortKey((prev) => (prev === key ? null : key))}
-                  style={{
-                    padding: "5px 12px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    borderRadius: 99,
-                    border: "1.5px solid",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    borderColor: sortKey === key ? "var(--brand)" : "var(--border)",
-                    background: sortKey === key ? "var(--brand)" : "#fff",
-                    color: sortKey === key ? "#fff" : "var(--text-sub)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {label}
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    {dir === "desc"
-                      ? <path d="M2 3l3 4 3-4" />
-                      : <path d="M2 7l3-4 3 4" />}
-                  </svg>
-                </button>
-              ))}
+              ).map(({ key, label, dir }) => {
+                const rank = sortKeys.indexOf(key);
+                const active = rank !== -1;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleSortKey(key)}
+                    style={{
+                      padding: "5px 12px",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      borderRadius: 99,
+                      border: "1.5px solid",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                      borderColor: active ? "var(--brand)" : "var(--border)",
+                      background: active ? "var(--brand)" : "#fff",
+                      color: active ? "#fff" : "var(--text-sub)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    {active && sortKeys.length > 1 && (
+                      <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.85, lineHeight: 1 }}>
+                        {rank + 1}
+                      </span>
+                    )}
+                    {label}
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      {dir === "desc"
+                        ? <path d="M2 3l3 4 3-4" />
+                        : <path d="M2 7l3-4 3 4" />}
+                    </svg>
+                  </button>
+                );
+              })}
+              {sortKeys.length > 1 && (
+                <span style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic" }}>
+                  按順序套用 {sortKeys.length} 個條件
+                </span>
+              )}
             </div>
 
             {/* Divider */}
@@ -494,9 +513,9 @@ export default function HousesPage() {
                     : `全部重算 (${houses.filter((h) => h.min_distance_km == null).length} 筆)`}
                 </button>
               )}
-              {(sortKey || selectedDistricts.length > 0 || selectedStatuses.length > 0) && (
+              {(sortKeys.length > 0 || selectedDistricts.length > 0 || selectedStatuses.length > 0) && (
                 <button
-                  onClick={() => { setSortKey(null); setSelectedDistricts([]); setSelectedStatuses([]); }}
+                  onClick={() => { setSortKeys([]); setSelectedDistricts([]); setSelectedStatuses([]); }}
                   style={{
                     padding: "5px 12px",
                     fontSize: 12,
@@ -627,7 +646,7 @@ export default function HousesPage() {
                         cursor: "pointer",
                       }}
                       onClick={() => {
-                        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKey, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
+                        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
                         navigate(`/houses/${h.id}`);
                       }}
                       onMouseEnter={() => setHoveredId(h.id)}
@@ -773,7 +792,7 @@ export default function HousesPage() {
                             <button
                               title="編輯"
                               onClick={() => {
-                                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKey, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
+                                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
                                 navigate(`/houses/${h.id}/edit`);
                               }}
                               style={{ width: 32, height: 32, borderRadius: 8, border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "var(--brand-mid)", transition: "background 0.15s, border-color 0.15s" }}

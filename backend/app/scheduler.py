@@ -51,6 +51,11 @@ async def save_listings(all_listings: list[dict]) -> dict:
                 skipped += 1
                 continue
 
+            district = item.get("district") or ""
+            if any(d in district for d in cc.EXCLUDE_DISTRICTS):
+                skipped += 1
+                continue
+
             address = item.get("address", "")
             coords = None
             if address:

@@ -91,6 +91,8 @@ const STATUS_LABEL: Record<string, string> = {
   active: "考慮中",
 };
 
+const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄"];
+
 function NavBar() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -240,6 +242,7 @@ export default function HouseDetailPage() {
   const [commuteMsg, setCommuteMsg] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   useEffect(() => {
     // 主要資料：失敗則導回列表
@@ -300,6 +303,17 @@ export default function HouseDetailPage() {
       navigate("/");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleStatusChange(newStatus: string) {
+    if (!house) return;
+    setStatusUpdating(true);
+    try {
+      await api.patch(`/api/houses/${id}`, { status: newStatus });
+      setHouse((prev) => prev ? { ...prev, status: newStatus } : prev);
+    } finally {
+      setStatusUpdating(false);
     }
   }
 
@@ -376,12 +390,15 @@ export default function HouseDetailPage() {
               </a>
             </div>
             <div className="header-actions" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span
+              <select
+                value={STATUS_LABEL[house.status] ?? house.status}
+                disabled={statusUpdating}
+                onChange={(e) => handleStatusChange(e.target.value)}
                 className={`badge ${STATUS_BADGE[house.status] ?? "badge-teal"}`}
-                style={{ fontSize: 13, padding: "0 16px", minHeight: 38 }}
+                style={{ fontSize: 13, padding: "0 12px", minHeight: 38, border: "none", borderRadius: 999, fontWeight: 700, cursor: "pointer", outline: "none", appearance: "none", opacity: statusUpdating ? 0.6 : 1, textAlign: "center" }}
               >
-                {STATUS_LABEL[house.status] ?? house.status}
-              </span>
+                {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
               <button
                 title="編輯"
                 onClick={() => navigate(`/houses/${id}/edit`)}
