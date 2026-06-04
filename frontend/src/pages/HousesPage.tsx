@@ -41,41 +41,17 @@ function RatingBar({ value }: { value: number | null }) {
   if (value == null)
     return <span style={{ color: "var(--text-muted)", fontSize: 13 }}>—</span>;
 
-  let bgGradient = "linear-gradient(90deg, #10B981, #34d399)";
   let textColor = "var(--brand-mid)";
   if (value < 5) {
-    bgGradient = "linear-gradient(90deg, #ef4444, #f87171)";
     textColor = "#dc2626";
   } else if (value < 8) {
-    bgGradient = "linear-gradient(90deg, #f59e0b, #fbbf24)";
     textColor = "#d97706";
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <div
-        style={{
-          width: 72,
-          height: 7,
-          background: "var(--border-light)",
-          borderRadius: 99,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            height: "100%",
-            width: `${(value / 10) * 100}%`,
-            background: bgGradient,
-            borderRadius: 99,
-            transition: "width 0.4s ease",
-          }}
-        />
-      </div>
-      <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>
-        {value}
-      </span>
-    </div>
+    <span style={{ fontSize: 14, fontWeight: 700, color: textColor }}>
+      {value}
+    </span>
   );
 }
 
