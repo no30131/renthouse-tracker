@@ -19,7 +19,6 @@ from app.services.air_quality import fetch_air_quality
 from app.services.commute import get_commute as calculate_commute
 from app.services.forecast import fetch_forecast
 from app.services.geocoding import extract_district, geocode_with_district
-from app.services.listing_checker import check_listing_alive
 from app.services.scraper import scrape_url
 
 router = APIRouter(prefix="/api/houses", tags=["Houses"])
@@ -384,6 +383,11 @@ async def verify_listings(
     _: str = Depends(get_current_user),
 ):
     """並發檢查每筆物件的 URL，下架的標記為「已下架」。"""
+    try:
+        from app.services.listing_checker import check_listing_alive
+    except ModuleNotFoundError:
+        raise HTTPException(status_code=501, detail="listing_checker 未安裝，此功能僅限本機使用")
+
     candidates = (
         db.query(House)
         .filter(House.status.notin_(_SKIP_VERIFY_STATUSES))
