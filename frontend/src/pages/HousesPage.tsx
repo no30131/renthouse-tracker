@@ -20,7 +20,7 @@ interface House {
   min_distance_km: number | null;
 }
 
-const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄"];
+const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄", "已下架"];
 
 const STATUS_BADGE: Record<string, string> = {
   待確認: "badge-blue",
@@ -29,6 +29,7 @@ const STATUS_BADGE: Record<string, string> = {
   已看房: "badge-teal",
   已租定: "badge-green",
   已放棄: "badge-muted",
+  已下架: "badge-muted",
 };
 
 // 將 DB 原始 status 值轉成顯示文字（正規化舊的 active 值）
@@ -128,6 +129,8 @@ export default function HousesPage() {
   const [ratingUpdating, setRatingUpdating] = useState(false);
   const [recalcingIds, setRecalcingIds] = useState<Set<string>>(new Set());
   const [recalcingAll, setRecalcingAll] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{ checked: number; marked_offline: number } | null>(null);
   const housesRef = useRef<House[]>([]);
 
   // filter / sort state — 從 sessionStorage 恢復
@@ -222,15 +225,17 @@ export default function HousesPage() {
   }
 
   // apply filter + sort（狀態用 display label 比對，讓 active 和 考慮中 合一）
+  // 預設不顯示「已下架」，除非使用者主動篩選
   let displayedHouses = houses
     .filter((h) =>
       selectedDistricts.length === 0
         ? true
         : h.district != null && selectedDistricts.includes(h.district)
     )
-    .filter((h) =>
-      selectedStatuses.length === 0 ? true : selectedStatuses.includes(statusDisplay(h.status))
-    );
+    .filter((h) => {
+      if (selectedStatuses.length > 0) return selectedStatuses.includes(statusDisplay(h.status));
+      return statusDisplay(h.status) !== "已下架";
+    });
 
   if (sortKeys.length > 0) {
     displayedHouses = [...displayedHouses].sort((a, b) => {
@@ -300,6 +305,18 @@ export default function HousesPage() {
     } finally {
       setDeletingId(null);
       setDeleteLoading(false);
+    }
+  }
+
+  async function handleVerify() {
+    setVerifying(true);
+    setVerifyResult(null);
+    try {
+      const res = await api.post<{ checked: number; marked_offline: number }>("/api/houses/verify");
+      setVerifyResult(res.data);
+      await fetchHouses();
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -498,6 +515,39 @@ export default function HousesPage() {
 
             {/* Right-side actions */}
             <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+              {/* Verify offline button */}
+              <button
+                onClick={handleVerify}
+                disabled={verifying}
+                title={verifyResult ? `上次：驗證 ${verifyResult.checked} 筆，${verifyResult.marked_offline} 筆已下架` : "驗證物件是否仍在線上"}
+                style={{
+                  padding: "5px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  borderRadius: 99,
+                  border: "1.5px solid",
+                  cursor: verifying ? "default" : "pointer",
+                  transition: "all 0.15s",
+                  borderColor: verifyResult && verifyResult.marked_offline > 0 ? "var(--danger, #ef4444)" : "var(--border)",
+                  background: verifying ? "var(--bg-green)" : "#fff",
+                  color: verifying ? "var(--text-muted)" : verifyResult && verifyResult.marked_offline > 0 ? "var(--danger, #ef4444)" : "var(--text-sub)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="8" cy="8" r="7"/>
+                  <line x1="8" y1="5" x2="8" y2="8"/>
+                  <line x1="8" y1="11" x2="8.01" y2="11"/>
+                </svg>
+                {verifying
+                  ? "驗證中…"
+                  : verifyResult
+                  ? `${verifyResult.marked_offline} 筆下架`
+                  : "驗證下架"}
+              </button>
               {houses.some((h) => h.min_distance_km == null) && (
                 <button
                   onClick={handleRecalcAll}

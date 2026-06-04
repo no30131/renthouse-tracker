@@ -85,13 +85,14 @@ const STATUS_BADGE: Record<string, string> = {
   已看房: "badge-teal",
   已租定: "badge-green",
   已放棄: "badge-muted",
+  已下架: "badge-muted",
 };
 
 const STATUS_LABEL: Record<string, string> = {
   active: "考慮中",
 };
 
-const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄"];
+const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄", "已下架"];
 
 function NavBar() {
   const navigate = useNavigate();

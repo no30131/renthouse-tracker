@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 
-const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄"];
+const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄", "已下架"];
 
 type FormState = {
   title: string; address: string; district: string;

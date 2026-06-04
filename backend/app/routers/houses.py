@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import datetime, time
 from typing import Optional
@@ -18,6 +19,7 @@ from app.services.air_quality import fetch_air_quality
 from app.services.commute import get_commute as calculate_commute
 from app.services.forecast import fetch_forecast
 from app.services.geocoding import extract_district, geocode_with_district
+from app.services.listing_checker import check_listing_alive
 from app.services.scraper import scrape_url
 
 router = APIRouter(prefix="/api/houses", tags=["Houses"])
@@ -371,3 +373,38 @@ def delete_house(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="House not found")
     db.delete(house)
     db.commit()
+
+
+_SKIP_VERIFY_STATUSES = {"已下架", "已租定", "已放棄"}
+
+
+@router.post("/verify", summary="驗證所有物件是否仍在線")
+async def verify_listings(
+    db: Session = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """並發檢查每筆物件的 URL，下架的標記為「已下架」。"""
+    candidates = (
+        db.query(House)
+        .filter(House.status.notin_(_SKIP_VERIFY_STATUSES))
+        .all()
+    )
+
+    async def _check_one(house: House) -> bool:
+        return await check_listing_alive(house.source, house.source_id, house.url)
+
+    results = await asyncio.gather(*[_check_one(h) for h in candidates])
+
+    marked_offline = 0
+    for house, alive in zip(candidates, results):
+        if not alive:
+            house.status = "已下架"
+            marked_offline += 1
+
+    if marked_offline:
+        db.commit()
+
+    return {
+        "checked": len(candidates),
+        "marked_offline": marked_offline,
+    }
