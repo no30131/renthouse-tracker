@@ -206,5 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# 私用爬蟲（不開源）
+# 私用爬蟲與驗證工具（不開源）
 backend/app/services/crawler_private.py
+backend/app/services/listing_checker.py

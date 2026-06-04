@@ -105,8 +105,7 @@ export default function HousesPage() {
   const [ratingUpdating, setRatingUpdating] = useState(false);
   const [recalcingIds, setRecalcingIds] = useState<Set<string>>(new Set());
   const [recalcingAll, setRecalcingAll] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [verifyResult, setVerifyResult] = useState<{ checked: number; marked_offline: number } | null>(null);
+
   const housesRef = useRef<House[]>([]);
 
   // filter / sort state — 從 sessionStorage 恢復
@@ -284,17 +283,7 @@ export default function HousesPage() {
     }
   }
 
-  async function handleVerify() {
-    setVerifying(true);
-    setVerifyResult(null);
-    try {
-      const res = await api.post<{ checked: number; marked_offline: number }>("/api/houses/verify");
-      setVerifyResult(res.data);
-      await fetchHouses();
-    } finally {
-      setVerifying(false);
-    }
-  }
+
 
   return (
     <div style={{ minHeight: "100svh", paddingBottom: 80 }}>
@@ -491,39 +480,7 @@ export default function HousesPage() {
 
             {/* Right-side actions */}
             <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-              {/* Verify offline button */}
-              <button
-                onClick={handleVerify}
-                disabled={verifying}
-                title={verifyResult ? `上次：驗證 ${verifyResult.checked} 筆，${verifyResult.marked_offline} 筆已下架` : "驗證物件是否仍在線上"}
-                style={{
-                  padding: "5px 12px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  borderRadius: 99,
-                  border: "1.5px solid",
-                  cursor: verifying ? "default" : "pointer",
-                  transition: "all 0.15s",
-                  borderColor: verifyResult && verifyResult.marked_offline > 0 ? "var(--danger, #ef4444)" : "var(--border)",
-                  background: verifying ? "var(--bg-green)" : "#fff",
-                  color: verifying ? "var(--text-muted)" : verifyResult && verifyResult.marked_offline > 0 ? "var(--danger, #ef4444)" : "var(--text-sub)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="8" cy="8" r="7"/>
-                  <line x1="8" y1="5" x2="8" y2="8"/>
-                  <line x1="8" y1="11" x2="8.01" y2="11"/>
-                </svg>
-                {verifying
-                  ? "驗證中…"
-                  : verifyResult
-                  ? `${verifyResult.marked_offline} 筆下架`
-                  : "驗證下架"}
-              </button>
+
               {houses.some((h) => h.min_distance_km == null) && (
                 <button
                   onClick={handleRecalcAll}
