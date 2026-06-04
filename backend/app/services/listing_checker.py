@@ -1,8 +1,8 @@
 """
 驗證租屋物件是否仍在線上。
 
-591 的下架頁面會 redirect 到其他頁，透過 follow_redirects=False
-偵測 302/301 即可判斷下架，不需要 Playwright。
+591 下架頁面回傳 HTTP 200，但內容包含「物件不存在」錯誤訊息，
+需讀取頁面內容判斷，不能靠 status code。
 """
 
 import asyncio
@@ -23,19 +23,29 @@ _HEADERS = {
 
 _SEMAPHORE = asyncio.Semaphore(5)  # 同時最多 5 個並發請求
 
+# 591 下架頁面的特徵文字
+_591_OFFLINE_MARKERS = [
+    "物件不存在",
+    "已關閉或者被刪除",
+    "很抱歉，您查詢的物件",
+]
+
 
 async def _check_591(post_id: str) -> bool:
-    """591 詳細頁若下架會 302 redirect；保持原 URL 回 200 → 仍在線。"""
+    """讀取 591 詳細頁，若出現下架錯誤訊息則回傳 False。"""
     url = f"https://rent.591.com.tw/rent-detail-{post_id}.html"
     try:
         async with _SEMAPHORE:
             async with httpx.AsyncClient(
-                headers=_HEADERS, timeout=15, follow_redirects=False
+                headers=_HEADERS, timeout=15, follow_redirects=True, verify=False
             ) as client:
                 resp = await client.get(url)
-                alive = resp.status_code == 200
-                logger.debug("591 %s → HTTP %s → alive=%s", post_id, resp.status_code, alive)
-                return alive
+                if resp.status_code >= 400:
+                    return False
+                text = resp.text
+                offline = any(marker in text for marker in _591_OFFLINE_MARKERS)
+                logger.debug("591 %s → HTTP %s → offline=%s", post_id, resp.status_code, offline)
+                return not offline
     except Exception as exc:
         logger.warning("591 check failed for %s: %s", post_id, exc)
         return True  # 無法確認時保守視為仍在線
@@ -48,7 +58,7 @@ async def _check_generic(url: str) -> bool:
     try:
         async with _SEMAPHORE:
             async with httpx.AsyncClient(
-                headers=_HEADERS, timeout=15, follow_redirects=True
+                headers=_HEADERS, timeout=15, follow_redirects=True, verify=False
             ) as client:
                 resp = await client.head(url)
                 return resp.status_code < 400
