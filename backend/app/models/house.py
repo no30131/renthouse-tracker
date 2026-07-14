@@ -33,6 +33,8 @@ class House(Base):
     management_fee: Mapped[int | None] = mapped_column(Integer, nullable=True)
     pet_friendly: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     cooking_allowed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # 停車判斷："附車位" / "路邊可停" / None（未提及或無法判斷）
+    parking: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     user_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -39,6 +39,7 @@ class HouseCreate(BaseModel):
     management_fee: Optional[int] = None
     pet_friendly: Optional[bool] = None
     cooking_allowed: Optional[bool] = None
+    parking: Optional[str] = None
     status: str = "考慮中"
     user_rating: Optional[int] = None
     notes: Optional[str] = None
@@ -59,6 +60,7 @@ class HouseUpdate(BaseModel):
     management_fee: Optional[int] = None
     pet_friendly: Optional[bool] = None
     cooking_allowed: Optional[bool] = None
+    parking: Optional[str] = None
     status: Optional[str] = None
     user_rating: Optional[int] = None
     notes: Optional[str] = None
@@ -76,6 +78,7 @@ class HouseResponse(BaseModel):
     management_fee: Optional[int]
     pet_friendly: Optional[bool]
     cooking_allowed: Optional[bool]
+    parking: Optional[str]
     status: str
     user_rating: Optional[int]
     notes: Optional[str]

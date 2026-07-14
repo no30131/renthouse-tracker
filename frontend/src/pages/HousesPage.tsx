@@ -15,12 +15,15 @@ interface House {
   user_rating: number | null;
   pet_friendly: boolean | null;
   cooking_allowed: boolean | null;
+  parking: string | null;
   notes: string | null;
   url: string | null;
   min_distance_km: number | null;
 }
 
 const STATUS_OPTIONS = ["待確認", "考慮中", "已看房", "已租定", "已放棄", "已下架"];
+
+const PARKING_OPTIONS = ["附車位", "路邊可停"];
 
 const STATUS_BADGE: Record<string, string> = {
   待確認: "badge-blue",
@@ -87,7 +90,7 @@ const SESSION_KEY = "houses-page-state";
 function loadSavedState() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
-    if (raw) return JSON.parse(raw) as { sortKeys: SortKey[]; selectedDistricts: string[]; selectedStatuses: string[]; scrollY: number };
+    if (raw) return JSON.parse(raw) as { sortKeys: SortKey[]; selectedDistricts: string[]; selectedStatuses: string[]; selectedParking?: string[]; scrollY: number };
   } catch { /* ignore */ }
   return null;
 }
@@ -105,6 +108,8 @@ export default function HousesPage() {
   const [ratingUpdating, setRatingUpdating] = useState(false);
   const [recalcingIds, setRecalcingIds] = useState<Set<string>>(new Set());
   const [recalcingAll, setRecalcingAll] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{ checked: number; marked_offline: number } | null>(null);
 
   const housesRef = useRef<House[]>([]);
 
@@ -113,6 +118,7 @@ export default function HousesPage() {
   const [sortKeys, setSortKeys] = useState<SortKey[]>(saved?.sortKeys ?? []);
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>(saved?.selectedDistricts ?? []);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(saved?.selectedStatuses ?? []);
+  const [selectedParking, setSelectedParking] = useState<string[]>(saved?.selectedParking ?? []);
 
   function toggleSortKey(key: SortKey) {
     setSortKeys((prev) => {
@@ -198,6 +204,11 @@ export default function HousesPage() {
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
     );
   }
+  function toggleParking(p: string) {
+    setSelectedParking((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
+  }
 
   // apply filter + sort（狀態用 display label 比對，讓 active 和 考慮中 合一）
   // 預設不顯示「已下架」，除非使用者主動篩選
@@ -210,7 +221,12 @@ export default function HousesPage() {
     .filter((h) => {
       if (selectedStatuses.length > 0) return selectedStatuses.includes(statusDisplay(h.status));
       return statusDisplay(h.status) !== "已下架";
-    });
+    })
+    .filter((h) =>
+      selectedParking.length === 0
+        ? true
+        : h.parking != null && selectedParking.includes(h.parking)
+    );
 
   if (sortKeys.length > 0) {
     displayedHouses = [...displayedHouses].sort((a, b) => {
@@ -283,7 +299,17 @@ export default function HousesPage() {
     }
   }
 
-
+  async function handleVerify() {
+    setVerifying(true);
+    setVerifyResult(null);
+    try {
+      const res = await api.post<{ checked: number; marked_offline: number }>("/api/houses/verify");
+      setVerifyResult(res.data);
+      await fetchHouses();
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   return (
     <div style={{ minHeight: "100svh", paddingBottom: 80 }}>
@@ -319,7 +345,7 @@ export default function HousesPage() {
           <button
             className="btn-primary"
             onClick={() => {
-              sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
+              sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, selectedParking, scrollY: window.scrollY }));
               navigate("/houses/new");
             }}
             style={{ padding: "9px 20px", fontSize: 13, minHeight: 40, flexShrink: 0, marginTop: 4 }}
@@ -476,11 +502,61 @@ export default function HousesPage() {
                   {s}
                 </button>
               ))}
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-sub)", marginLeft: 12, marginRight: 4, letterSpacing: "0.4px" }}>
+                停車
+              </span>
+              {PARKING_OPTIONS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => toggleParking(p)}
+                  style={{
+                    padding: "5px 12px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 99,
+                    border: "1.5px solid",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    borderColor: selectedParking.includes(p) ? "var(--brand)" : "var(--border)",
+                    background: selectedParking.includes(p) ? "var(--brand)" : "#fff",
+                    color: selectedParking.includes(p) ? "#fff" : "var(--text-sub)",
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
             </div>
 
             {/* Right-side actions */}
             <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-
+              <button
+                onClick={handleVerify}
+                disabled={verifying}
+                title={verifyResult ? `上次：驗證 ${verifyResult.checked} 筆，${verifyResult.marked_offline} 筆已下架` : "驗證物件是否仍在線上"}
+                style={{
+                  padding: "5px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  borderRadius: 99,
+                  border: "1.5px solid",
+                  cursor: verifying ? "default" : "pointer",
+                  transition: "all 0.15s",
+                  borderColor: verifyResult && verifyResult.marked_offline > 0 ? "var(--danger, #ef4444)" : "var(--border)",
+                  background: verifying ? "var(--bg-green)" : "#fff",
+                  color: verifying ? "var(--text-muted)" : verifyResult && verifyResult.marked_offline > 0 ? "var(--danger, #ef4444)" : "var(--text-sub)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="8" cy="8" r="7"/>
+                  <line x1="8" y1="5" x2="8" y2="8"/>
+                  <line x1="8" y1="11" x2="8.01" y2="11"/>
+                </svg>
+                {verifying ? "驗證中…" : verifyResult ? `${verifyResult.marked_offline} 筆下架` : "驗證下架"}
+              </button>
               {houses.some((h) => h.min_distance_km == null) && (
                 <button
                   onClick={handleRecalcAll}
@@ -509,9 +585,9 @@ export default function HousesPage() {
                     : `全部重算 (${houses.filter((h) => h.min_distance_km == null).length} 筆)`}
                 </button>
               )}
-              {(sortKeys.length > 0 || selectedDistricts.length > 0 || selectedStatuses.length > 0) && (
+              {(sortKeys.length > 0 || selectedDistricts.length > 0 || selectedStatuses.length > 0 || selectedParking.length > 0) && (
                 <button
-                  onClick={() => { setSortKeys([]); setSelectedDistricts([]); setSelectedStatuses([]); }}
+                  onClick={() => { setSortKeys([]); setSelectedDistricts([]); setSelectedStatuses([]); setSelectedParking([]); }}
                   style={{
                     padding: "5px 12px",
                     fontSize: 12,
@@ -655,7 +731,7 @@ export default function HousesPage() {
                       </td>
                       <td style={{ padding: "15px 12px", width: 168 }}>
                         <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)", display: "block", width: 168, wordBreak: "break-all" }}>
-                          {h.title}
+                          {h.parking ? `(${h.parking})` : ""}{h.title}
                         </span>
                       </td>
                       <td
@@ -807,7 +883,7 @@ export default function HousesPage() {
                             <button
                               title="編輯"
                               onClick={() => {
-                                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, scrollY: window.scrollY }));
+                                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ sortKeys, selectedDistricts, selectedStatuses, selectedParking, scrollY: window.scrollY }));
                                 navigate(`/houses/${h.id}/edit`);
                               }}
                               style={{ width: 32, height: 32, borderRadius: 8, border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "var(--brand-mid)", transition: "background 0.15s, border-color 0.15s" }}

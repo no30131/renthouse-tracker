@@ -12,6 +12,7 @@ interface House {
   floor: string | null;
   pet_friendly: boolean | null;
   cooking_allowed: boolean | null;
+  parking: string | null;
   status: string;
   user_rating: number | null;
   notes: string | null;
@@ -491,6 +492,13 @@ export default function HouseDetailPage() {
             <InfoRow label="樓層">{house.floor ?? <Dash />}</InfoRow>
             <InfoRow label="可養寵物"><BoolBadge value={house.pet_friendly} /></InfoRow>
             <InfoRow label="可開伙"><BoolBadge value={house.cooking_allowed} /></InfoRow>
+            <InfoRow label="停車">
+              {house.parking ? (
+                <span className={`badge ${house.parking === "附車位" ? "badge-green" : "badge-teal"}`}>
+                  {house.parking}
+                </span>
+              ) : <Dash />}
+            </InfoRow>
             <InfoRow label="來源">{{ Manual: '手動新增' }[house.source as 'Manual'] ?? house.source}</InfoRow>
             <InfoRow label="建立時間">{formatTime(house.created_at)}</InfoRow>
             <InfoRow label="更新時間" >{formatTime(house.updated_at)}</InfoRow>
