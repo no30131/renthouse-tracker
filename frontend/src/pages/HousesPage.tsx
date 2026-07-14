@@ -529,6 +529,7 @@ export default function HousesPage() {
 
             {/* Right-side actions */}
             <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+              {import.meta.env.DEV && (
               <button
                 onClick={handleVerify}
                 disabled={verifying}
@@ -557,6 +558,7 @@ export default function HousesPage() {
                 </svg>
                 {verifying ? "驗證中…" : verifyResult ? `${verifyResult.marked_offline} 筆下架` : "驗證下架"}
               </button>
+              )}
               {houses.some((h) => h.min_distance_km == null) && (
                 <button
                   onClick={handleRecalcAll}
